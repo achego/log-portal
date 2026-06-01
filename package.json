@@ -1,0 +1,12 @@
+{
+  "name": "log-portal",
+  "version": "1.0.0",
+  "description": "A drop-in logging package for Express + TypeScript backends. It writes structured logs to the filesystem as JSONL and exposes a read API (historical + live SSE) so a dashboard can show server logs to any developer — no SSH or server access needed.",
+  "license": "ISC",
+  "author": "Achego Tamunobelema",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
