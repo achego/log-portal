@@ -1,5 +1,5 @@
 import util from "util";
-import { NormalizedError } from "./types";
+import { NormalizedError } from "../types";
 
 export interface ErrorHandler {
   name: string;

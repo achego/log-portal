@@ -13,9 +13,9 @@ export interface PortalEnv {
   basePath?: string;
   /** LOG_PORTAL_DIR — directory where log files are written. Default `<cwd>/logs`. */
   dir?: string;
-  /** LOG_PORTAL_RETENTION_DAYS — delete log files older than this many days. Default `2` (`-1` = keep forever). */
+  /** LOG_PORTAL_RETENTION_DAYS — delete log files older than this many days. Default `-1` = off (keep forever); set a positive number to enable. */
   retentionDays?: string;
-  /** LOG_PORTAL_MAX_FILE_MB — roll to a new file segment once one exceeds this size in MB. Default `50` (`0` = no rolling). */
+  /** LOG_PORTAL_MAX_FILE_MB — roll to a new file segment once one exceeds this size in MB. Default `0` = off (no rolling); set a positive number to enable. */
   maxFileMb?: string;
   /** LOG_PORTAL_FLUSH_MS — buffer writes and flush every N ms. Default `0` = write synchronously per entry. */
   flushMs?: string;

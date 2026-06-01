@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { createErrorResponse, createSuccessResponse } from "./response";
-import { getEmitter, getLogsDir, listDates, readAfter, readEntries } from "./store";
-import { encryptPayload } from "./auth-crypto";
-import { levelInfo } from "./colors";
-import { LogEntry, LogLevel, ReadQuery } from "./types";
+import { getEmitter, getLogsDir, listDates, readAfter, readEntries } from "../core/store";
+import { encryptPayload } from "../auth/auth-crypto";
+import { levelInfo } from "../core/colors";
+import { LogEntry, LogLevel, ReadQuery } from "../types";
 
 const LEVELS: LogLevel[] = ["error", "warn", "info", "debug", "request", "threat"];
 

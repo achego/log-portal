@@ -1,7 +1,7 @@
 import path from "path";
-import { AuthConfig, LogPortalOptions } from "./types";
+import { AuthConfig, LogPortalOptions } from "../types";
 import { envBool, envInt, portalEnv } from "./env";
-import { logger } from "./logger";
+import { logger } from "../core/logger";
 
 export function resolveAuthConfig(options: LogPortalOptions, logsDir: string): AuthConfig {
   const env = portalEnv();

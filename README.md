@@ -8,16 +8,57 @@ Zero new npm dependencies (node built-ins + the already-present `express` / opti
 
 ## Install
 
-Copy the `log-portal/` folder into your project, then mount it once after your body parsers:
+Install straight from GitHub (the package builds itself on install):
+
+```bash
+npm install github:achego/log-portal
+# or pin a tag/commit: npm install github:achego/log-portal#v1.0.0
+```
+
+`express` is a peer dependency (you already have it). `winston-transport` is an
+optional peer — install it only if you use [`createLogPortalTransport`](#optional-route-winston-into-the-portal).
+
+Mount it once after your body parsers:
 
 ```ts
-import { mountLogPortal } from "./log-portal";
+import { mountLogPortal } from "log-portal";
 
 mountLogPortal(app); // mounts the read API and starts capturing logs
 ```
 
 That's it. By default it captures all `console.*` output, writes to `<cwd>/logs/YYYY-MM-DD.jsonl`,
 and serves the API at `/api/_logs`.
+
+## Running locally (test with a frontend)
+
+This package is a library — to exercise it (or point a dashboard frontend at it) you mount it in
+an Express server. A ready-to-run example lives in [`example/server.ts`](example/server.ts); it
+adds CORS, a couple of demo routes, and a heartbeat log so the live stream always has data:
+
+```bash
+npm install                 # installs dev deps (tsx, express, …)
+cp .env.example .env        # optional — set PORT / LOG_PORTAL_* overrides
+npm run example             # starts http://localhost:4000
+# or: npm run example:watch   to reload on edits
+```
+
+The package itself never loads a `.env` — `mountLogPortal` just reads `process.env.LOG_PORTAL_*`
+at startup. The example script loads `.env` for you (via node's `--env-file-if-exists`); in your
+own backend, use whatever already populates `process.env` (dotenv, your platform's env config, etc.).
+Options passed to `mountLogPortal(app, {...})` always win over env vars.
+
+Then point your frontend at the read API:
+
+| URL                                       | Use                                  |
+| ----------------------------------------- | ------------------------------------ |
+| `http://localhost:4000/api/_logs`         | historical logs (newest first)       |
+| `http://localhost:4000/api/_logs/stream`  | live SSE stream                      |
+| `http://localhost:4000/api/_logs/health`  | quick sanity check                   |
+
+Generate some logs to look at by hitting `http://localhost:4000/demo/info` and `/demo/error`.
+The example reflects the request's `Origin` so any dev frontend can read it; tighten the CORS block
+if you want a fixed allow-list. To test inside your own backend instead, just call
+`mountLogPortal(app)` there.
 
 ## Configuration
 
@@ -27,8 +68,8 @@ Options passed to `mountLogPortal(app, options)` take precedence over env vars, 
 | ----------------- | ---------------------------- | -------------- |
 | `basePath`        | `LOG_PORTAL_BASE_PATH`       | `/api/_logs`   |
 | `logsDir`         | `LOG_PORTAL_DIR`             | `<cwd>/logs`   |
-| `retentionDays`   | `LOG_PORTAL_RETENTION_DAYS`  | `2`            |
-| `maxFileMb`       | `LOG_PORTAL_MAX_FILE_MB`     | `50` (`0` = off) |
+| `retentionDays`   | `LOG_PORTAL_RETENTION_DAYS`  | `-1` (off; set a positive number of days to auto-delete) |
+| `maxFileMb`       | `LOG_PORTAL_MAX_FILE_MB`     | `0` (off; set MB to roll/segment) |
 | `flushIntervalMs` | `LOG_PORTAL_FLUSH_MS`        | `0` (sync)     |
 | `maxBufferLines`  | `LOG_PORTAL_BUFFER_LINES`    | `1000`         |
 | `captureConsole`  | `LOG_PORTAL_CAPTURE_CONSOLE` | `true`         |
@@ -51,13 +92,18 @@ Built-in auth options (see [Auth](#auth)):
 | `adminSecurityCode` | `LOG_PORTAL_ADMIN_SECURITY_CODE` | —                        |
 | `authDbPath`        | `LOG_PORTAL_AUTH_DB`             | `<logsDir>/log-portal-auth.json` |
 | `sessionTtlMinutes` | `LOG_PORTAL_SESSION_TTL_MIN`     | `120`                    |
-| `e2eEnabled`        | `LOG_PORTAL_E2E_ENABLED`         | `false`                  |
+| `e2eEnabled`        | `LOG_PORTAL_E2E_ENABLED`         | `true`                   |
 
 ### Storage: rotation, size cap & retention
 
-Logs are written as `YYYY-MM-DD.jsonl`, rotating daily. When a file passes `maxFileMb` it rolls
-into segments (`YYYY-MM-DD.1.jsonl`, `…2.jsonl`, …) so a single busy day never produces one giant
-file. Files older than `retentionDays` are deleted on init and on each rollover.
+Logs are written as `YYYY-MM-DD.jsonl`, rotating daily. **Size-based rolling and automatic
+deletion are both off by default** — nothing is ever rolled or removed unless you opt in, so you
+keep full history until you decide otherwise (manage it via the [admin endpoints](#managing-logs-admin)).
+
+- Set `maxFileMb` (e.g. `50`) to roll a busy day into segments (`YYYY-MM-DD.1.jsonl`, `…2.jsonl`, …)
+  so no single file grows unbounded. Default `0` = no rolling.
+- Set `retentionDays` (e.g. `7`) to auto-delete files older than that many days, on init and on each
+  rollover. Default `-1` = keep forever.
 
 ### Write durability vs throughput
 
@@ -79,7 +125,7 @@ query string and user-agent only — request bodies are not inspected. Add your 
 touching core:
 
 ```ts
-import { registerThreatRule } from "./log-portal";
+import { registerThreatRule } from "log-portal";
 
 registerThreatRule({
   type: "graphql_introspection",
@@ -93,7 +139,7 @@ registerThreatRule({
 `console.log/info/warn/error/dir` are captured automatically. For richer entries use the explicit API:
 
 ```ts
-import { logger } from "./log-portal";
+import { logger } from "log-portal";
 
 logger.info("user created", { userId });
 logger.error("payment failed", err);        // pass the error as the 2nd arg
@@ -107,7 +153,7 @@ the same way. Built-in handling for generic `Error` and Axios errors (request UR
 headers, response status + body land in `err.data`). Add more error types without touching call sites:
 
 ```ts
-import { registerErrorHandler } from "./log-portal";
+import { registerErrorHandler } from "log-portal";
 
 registerErrorHandler({
   name: "jwt",
@@ -122,7 +168,7 @@ header or a generated UUID, also returned on the response), so a failing request
 ### Optional: route winston into the portal
 
 ```ts
-import { createLogPortalTransport } from "./log-portal";
+import { createLogPortalTransport } from "log-portal";
 manualLogger.add(createLogPortalTransport());
 ```
 
@@ -203,6 +249,26 @@ When adding a developer, the admin may set a time limit: `expiresInDays` (a posi
 `expiresAt` (an absolute future ISO date). If neither is given, access is unlimited. Expiry is
 enforced at login **and** on every read, so it cuts access promptly — like a revoke that fires on its
 own at the set time.
+
+#### Managing logs (admin)
+
+Since retention is off by default, logs accumulate until you act. These **admin-only** routes (same
+`Authorization: Bearer <admin-session-token>`) let you see disk usage, archive logs for safekeeping,
+and reclaim space. Selection is by file **name** (from the listing); the frontend can group by `date`.
+
+| Method | Path                   | Body                  | Response                                                        |
+| ------ | ---------------------- | --------------------- | -------------------------------------------------------------- |
+| `GET`  | `/admin/logs`          | —                     | `{ files: [{ name, date, seg, size, modifiedAt }], totalBytes, count }` |
+| `POST` | `/admin/logs/download` | `{ files: string[] }` | **binary `application/zip`** (`Content-Disposition: attachment`) of the selected files |
+| `POST` | `/admin/logs/delete`   | `{ files: string[] }` | `{ deleted, notFound, invalid, freedBytes }`                   |
+
+`size`/`totalBytes`/`freedBytes` are in bytes. `download` returns a single zip built with Node's
+built-in `zlib` (no extra dependency; the archive is assembled in memory, so it's meant for normal
+admin selections rather than multi-GB dumps). File names are validated against the log-file pattern
+and confined to the logs directory, so traversal attempts land in `invalid` and are never touched.
+
+Intended frontend flow: when the admin chooses to clear logs, offer **download first** (zip for
+safekeeping), then let them call `delete` to free space — the two actions are independent.
 
 ### Optional: end-to-end payload encryption
 

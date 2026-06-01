@@ -1,4 +1,4 @@
-import { LevelInfo, LogColor, LogLevel } from "./types";
+import { LevelInfo, LogColor, LogLevel } from "../types";
 
 const COLORS: Record<LogLevel, LogColor> = {
   error: { text: "#f87171", bg: "#ef44441a", border: "" },

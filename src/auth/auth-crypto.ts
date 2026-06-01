@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, hkdfSync, randomBytes, timingSafeEqual } from "node:crypto";
-import { SessionPayload } from "./types";
+import { SessionPayload } from "../types";
 
 /** A long, high-entropy developer code. 256 bits, URL-safe. */
 export function generateDevCode(): string {

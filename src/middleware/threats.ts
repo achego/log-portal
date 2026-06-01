@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
-import { record } from "./logger";
-import { ThreatContext, ThreatDetection, ThreatRule, ThreatSeverity } from "./types";
+import { record } from "../core/logger";
+import { ThreatContext, ThreatDetection, ThreatRule, ThreatSeverity } from "../types";
 
 const SENSITIVE_PATHS = [
   "/.env",

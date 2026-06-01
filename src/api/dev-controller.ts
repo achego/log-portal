@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { AuthConfig } from "./types";
+import { AuthConfig } from "../types";
 import { createErrorResponse, createSuccessResponse } from "./response";
-import { signSession } from "./auth-crypto";
-import { verifyDeveloper } from "./dev-store";
+import { signSession } from "../auth/auth-crypto";
+import { verifyDeveloper } from "../auth/dev-store";
 
 export function createDevController(auth: AuthConfig) {
   return {

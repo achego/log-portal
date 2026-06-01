@@ -1,6 +1,6 @@
-import Transport from "winston-transport";
+import type Transport from "winston-transport";
 import { record } from "./logger";
-import { LogLevel } from "./types";
+import { LogLevel } from "../types";
 
 const LEVELS: LogLevel[] = ["error", "warn", "info", "debug", "request", "threat"];
 
@@ -11,7 +11,13 @@ function asLevel(level: unknown): LogLevel {
 }
 
 export function createLogPortalTransport(opts?: Transport.TransportStreamOptions): Transport {
-  class LogPortalTransport extends Transport {
+  // `winston-transport` is an optional peer dependency: only required when a
+  // consumer actually wires up the Winston transport, so the rest of the
+  // package keeps working without `winston` installed.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const TransportBase: typeof Transport = require("winston-transport");
+
+  class LogPortalTransport extends TransportBase {
     log(info: any, next: () => void): void {
       setImmediate(() => this.emit("logged", info));
       const { level, message, stack, ...meta } = info;

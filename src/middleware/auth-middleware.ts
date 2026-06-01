@@ -1,8 +1,8 @@
 import { Request, RequestHandler } from "express";
-import { AuthConfig } from "./types";
-import { isActiveDeveloper } from "./dev-store";
-import { verifySession } from "./auth-crypto";
-import { createErrorResponse } from "./response";
+import { AuthConfig } from "../types";
+import { isActiveDeveloper } from "../auth/dev-store";
+import { verifySession } from "../auth/auth-crypto";
+import { createErrorResponse } from "../api/response";
 
 function bearer(req: Request): string | undefined {
   const header = req.header("authorization");

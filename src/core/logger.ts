@@ -1,4 +1,4 @@
-import { LogEntry, LogLevel } from "./types";
+import { LogEntry, LogLevel } from "../types";
 import { append, nextId } from "./store";
 import { getRequestId } from "./context";
 import { normalizeError } from "./normalize-error";

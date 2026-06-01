@@ -1,5 +1,5 @@
 import util from "util";
-import { LogLevel } from "./types";
+import { LogLevel } from "../types";
 import { record } from "./logger";
 import { normalizeError, isErrorLike } from "./normalize-error";
 
@@ -27,7 +27,7 @@ export function patchConsole(): void {
   patched = true;
 
   (Object.keys(LEVEL) as ConsoleMethod[]).forEach((method) => {
-    const original = console[method].bind(console);
+    const original = console[method].bind(console) as (...args: unknown[]) => void;
     console[method] = (...args: unknown[]) => {
       original(...args);
       if (inside) return;

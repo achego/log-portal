@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { randomBytes } from "node:crypto";
-import { DevRecord, PublicDevRecord } from "./types";
+import { DevRecord, PublicDevRecord } from "../types";
 import { generateDevCode, hashCode, timingSafeEqualStr } from "./auth-crypto";
 
 let dbPath = "";

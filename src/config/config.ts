@@ -1,5 +1,5 @@
 import path from "path";
-import { LogPortalOptions, ResolvedConfig } from "./types";
+import { LogPortalOptions, ResolvedConfig } from "../types";
 import { envBool, envInt, portalEnv } from "./env";
 import { resolveAuthConfig } from "./auth-config";
 
@@ -7,12 +7,12 @@ const DEFAULT_LOGS_DIR = path.join(process.cwd() || ".", "logs");
 
 export function resolveConfig(options: LogPortalOptions = {}): ResolvedConfig {
   const env = portalEnv();
-  const maxFileMb = options.maxFileMb ?? envInt(env.maxFileMb, 50);
+  const maxFileMb = options.maxFileMb ?? envInt(env.maxFileMb, 0);
   const logsDir = (options.logsDir ?? env.dir ?? DEFAULT_LOGS_DIR).trim() || DEFAULT_LOGS_DIR;
   return {
     basePath: options.basePath ?? env.basePath ?? "/api/_logs",
     logsDir,
-    retentionDays: options.retentionDays ?? envInt(env.retentionDays, 2),
+    retentionDays: options.retentionDays ?? envInt(env.retentionDays, -1),
     maxFileBytes: Math.max(maxFileMb, 0) * 1024 * 1024,
     flushIntervalMs: options.flushIntervalMs ?? envInt(env.flushMs, 0),
     maxBufferLines: options.maxBufferLines ?? envInt(env.bufferLines, 1000),

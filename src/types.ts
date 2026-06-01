@@ -58,7 +58,9 @@ export interface LogEntry {
 export interface LogPortalOptions {
   basePath?: string;
   logsDir?: string;
+  /** Delete log files older than this many days. Off by default (`-1` = keep forever). */
   retentionDays?: number;
+  /** Roll to a new file segment once one exceeds this size in MB. Off by default (`0` = no rolling). */
   maxFileMb?: number;
   flushIntervalMs?: number;
   maxBufferLines?: number;
@@ -156,4 +158,18 @@ export interface ReadResult {
   entries: LogEntry[];
   nextBefore: string | null;
   hasMore: boolean;
+}
+
+/** A log file on disk, as reported by the admin log-management API. */
+export interface LogFileInfo {
+  /** Filename, e.g. `2026-06-01.jsonl` or `2026-06-01.1.jsonl`. */
+  name: string;
+  /** The `YYYY-MM-DD` the file belongs to. */
+  date: string;
+  /** Rotation segment (0 = primary file). */
+  seg: number;
+  /** File size in bytes. */
+  size: number;
+  /** Last-modified timestamp (ISO 8601). */
+  modifiedAt: string;
 }

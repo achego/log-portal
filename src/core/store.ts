@@ -1,13 +1,13 @@
 import fs from "fs";
 import path from "path";
 import { EventEmitter } from "events";
-import { LogEntry, ReadQuery, ReadResult, StoreConfig } from "./types";
+import { LogEntry, LogFileInfo, ReadQuery, ReadResult, StoreConfig } from "../types";
 
 const emitter = new EventEmitter();
 emitter.setMaxListeners(0);
 
 let logsDir = path.join(process.cwd(), "logs");
-let retentionDays = 2;
+let retentionDays = -1;
 let maxFileBytes = 0;
 let flushIntervalMs = 0;
 let maxBufferLines = 1000;
@@ -219,6 +219,79 @@ export function listDates(): string[] {
 
 export function getLogsDir(): string {
   return logsDir;
+}
+
+/** All log files with their on-disk size + mtime, newest-first. For the admin log-management API. */
+export function listLogFiles(): LogFileInfo[] {
+  flush();
+  const out: LogFileInfo[] = [];
+  for (const f of listFiles()) {
+    try {
+      const st = fs.statSync(path.join(logsDir, f.name));
+      out.push({ name: f.name, date: f.date, seg: f.seg, size: st.size, modifiedAt: st.mtime.toISOString() });
+    } catch {
+      // file vanished between readdir and stat; skip
+    }
+  }
+  return out.sort((a, b) => (a.date === b.date ? b.seg - a.seg : a.date < b.date ? 1 : -1));
+}
+
+/**
+ * Resolve a log filename to its absolute path, or `null` if it is not a valid log file inside
+ * `logsDir`. Guards against path traversal / absolute paths — only names matching the log file
+ * pattern that resolve to a direct child of `logsDir` are accepted.
+ */
+export function safeLogPath(name: string): string | null {
+  if (typeof name !== "string" || !NAME_RE.test(name)) return null;
+  const full = path.resolve(logsDir, name);
+  if (path.dirname(full) !== path.resolve(logsDir)) return null;
+  return full;
+}
+
+/** Delete the named log files (admin action). Returns what was removed, skipped, or rejected. */
+export function deleteLogFiles(names: string[]): {
+  deleted: string[];
+  notFound: string[];
+  invalid: string[];
+  freedBytes: number;
+} {
+  flush();
+  const deleted: string[] = [];
+  const notFound: string[] = [];
+  const invalid: string[] = [];
+  let freedBytes = 0;
+  for (const name of names) {
+    const full = safeLogPath(name);
+    if (!full) {
+      invalid.push(name);
+      continue;
+    }
+    try {
+      freedBytes += fs.statSync(full).size;
+      fs.unlinkSync(full);
+      deleted.push(name);
+      if (name === path.basename(currentFile)) {
+        // dropped the active file; force a fresh target on next write
+        currentFile = "";
+        currentBytes = 0;
+      }
+    } catch (err: any) {
+      if (err?.code === "ENOENT") notFound.push(name);
+      else invalid.push(name);
+    }
+  }
+  return { deleted, notFound, invalid, freedBytes };
+}
+
+/** Read a log file's raw bytes by name, or `null` if the name is invalid / unreadable. Used for zip download. */
+export function readLogFileRaw(name: string): Buffer | null {
+  const full = safeLogPath(name);
+  if (!full) return null;
+  try {
+    return fs.readFileSync(full);
+  } catch {
+    return null;
+  }
 }
 
 function readFile(name: string): LogEntry[] {

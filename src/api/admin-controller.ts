@@ -1,13 +1,23 @@
 import { Request, Response } from "express";
-import { AuthConfig } from "./types";
+import { AuthConfig } from "../types";
 import { createErrorResponse, createSuccessResponse } from "./response";
-import { signSession, timingSafeEqualStr } from "./auth-crypto";
-import { addDeveloper, listDevelopers, regenerateCode, removeDeveloper, setActive } from "./dev-store";
+import { signSession, timingSafeEqualStr } from "../auth/auth-crypto";
+import { addDeveloper, listDevelopers, regenerateCode, removeDeveloper, setActive } from "../auth/dev-store";
+import { deleteLogFiles, listLogFiles, readLogFileRaw } from "../core/store";
+import { zipFiles, ZipEntry } from "../core/zip";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function paramEmail(req: Request): string {
   return decodeURIComponent(String(req.params.email ?? "")).trim().toLowerCase();
+}
+
+/** Extract a non-empty list of log file names from the request body, or `null` if absent/empty. */
+function fileNames(body: any): string[] | null {
+  const files = body?.files;
+  if (!Array.isArray(files)) return null;
+  const names = files.filter((f: unknown): f is string => typeof f === "string" && f.trim() !== "").map((f) => f.trim());
+  return names.length ? names : null;
 }
 
 /** Resolve an optional access expiry from the request body. Accepts `expiresAt`
@@ -114,6 +124,50 @@ export function createAdminController(auth: AuthConfig) {
         return;
       }
       res.json(createSuccessResponse({ email, removed: true }));
+    },
+
+    // --- Log file management ---
+
+    logFiles(_req: Request, res: Response) {
+      const files = listLogFiles();
+      const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+      res.json(createSuccessResponse({ files, totalBytes, count: files.length }));
+    },
+
+    downloadLogs(req: Request, res: Response) {
+      const names = fileNames(req.body);
+      if (!names) {
+        res.status(400).json(createErrorResponse("files must be a non-empty array of log file names"));
+        return;
+      }
+      const mtimes = new Map(listLogFiles().map((f) => [f.name, new Date(f.modifiedAt)]));
+      const entries: ZipEntry[] = [];
+      const missing: string[] = [];
+      for (const name of names) {
+        const data = readLogFileRaw(name);
+        if (data) entries.push({ name, data, mtime: mtimes.get(name) });
+        else missing.push(name);
+      }
+      if (entries.length === 0) {
+        res.status(404).json(createErrorResponse("none of the requested log files exist", { missing }));
+        return;
+      }
+      const zip = zipFiles(entries);
+      const stamp = new Date().toISOString().slice(0, 10);
+      // Binary response: res.send is NOT wrapped by the E2E middleware, so the zip streams
+      // through un-encrypted (the request body, if E2E-encrypted, was already decrypted upstream).
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", `attachment; filename="logs-${stamp}.zip"`);
+      res.send(zip);
+    },
+
+    deleteLogs(req: Request, res: Response) {
+      const names = fileNames(req.body);
+      if (!names) {
+        res.status(400).json(createErrorResponse("files must be a non-empty array of log file names"));
+        return;
+      }
+      res.json(createSuccessResponse(deleteLogFiles(names)));
     },
   };
 }

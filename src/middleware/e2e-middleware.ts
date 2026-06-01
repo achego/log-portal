@@ -1,6 +1,6 @@
 import { Request, RequestHandler } from "express";
-import { deriveSessionKey, encryptPayload, decryptPayload } from "./auth-crypto";
-import { createErrorResponse } from "./response";
+import { deriveSessionKey, encryptPayload, decryptPayload } from "../auth/auth-crypto";
+import { createErrorResponse } from "../api/response";
 
 function token(req: Request): string | undefined {
   const header = req.header("authorization");

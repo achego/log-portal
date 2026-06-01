@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import { record } from "./logger";
+import { record } from "../core/logger";
 
 export function requestLogMiddleware(basePath: string): RequestHandler {
   return (req, _res, next) => {

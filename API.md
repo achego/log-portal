@@ -317,6 +317,33 @@ Base `<base>/admin`. Login first, then send `Authorization: Bearer <token>` on e
 `:email` must be URL-encoded. The plaintext code is returned only at create/regenerate time and is
 never retrievable afterward — surface it to the admin immediately.
 
+### Admin: log file management
+
+Same admin token. Lets an admin inspect disk usage, download logs as a zip (for safekeeping), and
+delete logs to reclaim space. Selection is by file `name` (from the listing); group by `date` in the UI.
+
+```jsonc
+// GET /api/_logs/admin/logs   ← sizes are bytes, newest-first
+{ "status": "success", "data": {
+    "files": [ { "name": "2026-06-01.jsonl", "date": "2026-06-01", "seg": 0, "size": 16675, "modifiedAt": "2026-06-01T12:57:17.641Z" } ],
+    "totalBytes": 16675, "count": 1 } }
+
+// POST /api/_logs/admin/logs/download   body: { files: ["2026-06-01.jsonl", ...] }
+//   → binary response: Content-Type: application/zip, Content-Disposition: attachment; filename="logs-<date>.zip"
+//   (NOT the JSON envelope — save the body straight to a .zip)
+
+// POST /api/_logs/admin/logs/delete   body: { files: ["2026-06-01.jsonl", ...] }
+{ "status": "success", "data": {
+    "deleted": ["2026-06-01.jsonl"], "notFound": ["2099-01-01.jsonl"], "invalid": ["../../etc/passwd"], "freedBytes": 16675 } }
+```
+
+Names are validated against the log-file pattern and confined to the logs directory: anything else
+(traversal, absolute paths, non-log names) is reported under `invalid` and never deleted/read. Missing
+files come back under `notFound`. Recommended UX: offer **download first**, then delete — the two are
+independent calls. With E2E on, send the request body encrypted as usual; the **download** response is
+binary and is returned un-encrypted (a zip you save directly), while `delete`/`logs` JSON responses are
+encrypted like other admin routes.
+
 ---
 
 ## 7. End-to-end encryption (when `LOG_PORTAL_E2E_ENABLED=true`)

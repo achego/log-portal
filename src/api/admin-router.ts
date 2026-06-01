@@ -1,8 +1,8 @@
 import { Router, RequestHandler } from "express";
-import { AuthConfig } from "./types";
+import { AuthConfig } from "../types";
 import { createAdminController } from "./admin-controller";
-import { createAdminAuth } from "./auth-middleware";
-import { createE2EMiddleware } from "./e2e-middleware";
+import { createAdminAuth } from "../middleware/auth-middleware";
+import { createE2EMiddleware } from "../middleware/e2e-middleware";
 
 export function createAdminRouter(auth: AuthConfig): Router {
   const router = Router();
@@ -17,5 +17,9 @@ export function createAdminRouter(auth: AuthConfig): Router {
   router.post("/developers/:email/revoke", ...guards, controller.revoke);
   router.post("/developers/:email/activate", ...guards, controller.activate);
   router.delete("/developers/:email", ...guards, controller.removeDeveloper);
+
+  router.get("/logs", ...guards, controller.logFiles);
+  router.post("/logs/download", ...guards, controller.downloadLogs);
+  router.post("/logs/delete", ...guards, controller.deleteLogs);
   return router;
 }
