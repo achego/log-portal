@@ -60,6 +60,19 @@ setInterval(
   5000,
 );
 
+setInterval(async () => {
+  try {
+    const response = await fetch(
+      "https://jsonplaceholder.typicode.com/todos/1000",
+    );
+    logger.info("the response", { response });
+
+    // throw Error("Test Error");
+  } catch (e) {
+    logger.error("An error occurred", e);
+  }
+}, 3000);
+
 const PORT = Number(process.env.PORT) || 4000;
 app.listen(PORT, () => {
   console.log(
@@ -70,3 +83,8 @@ app.listen(PORT, () => {
     `[example] live SSE:   http://localhost:${PORT}/api/_logs/stream`,
   );
 });
+
+// Users should be turn off intercepting console log
+// SSE connection should be authenticated per request
+// Role based log viewing
+// Protection for logging sensitive data

@@ -160,16 +160,10 @@ export interface ReadResult {
   hasMore: boolean;
 }
 
-/** A log file on disk, as reported by the admin log-management API. */
 export interface LogFileInfo {
-  /** Filename, e.g. `2026-06-01.jsonl` or `2026-06-01.1.jsonl`. */
   name: string;
-  /** The `YYYY-MM-DD` the file belongs to. */
   date: string;
-  /** Rotation segment (0 = primary file). */
   seg: number;
-  /** File size in bytes. */
   size: number;
-  /** Last-modified timestamp (ISO 8601). */
   modifiedAt: string;
 }
